@@ -1,12 +1,12 @@
 package cn.org.hentai.jtt1078.subscriber;
 
 import cn.org.hentai.jtt1078.codec.MP3Encoder;
+import cn.org.hentai.jtt1078.entity.ConnectType;
 import cn.org.hentai.jtt1078.flv.AudioTag;
 import cn.org.hentai.jtt1078.flv.FlvAudioTagEncoder;
 import cn.org.hentai.jtt1078.flv.FlvEncoder;
 import cn.org.hentai.jtt1078.util.ByteBufUtils;
 import cn.org.hentai.jtt1078.util.FLVUtils;
-import cn.org.hentai.jtt1078.util.HttpChunk;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -21,9 +21,9 @@ public class VideoSubscriber extends Subscriber
     private long lastAudioFrameTimeOffset = 0;
     private boolean videoHeaderSent = false;
 
-    public VideoSubscriber(String tag, ChannelHandlerContext ctx)
+    public VideoSubscriber(String tag, ConnectType connectType, ChannelHandlerContext ctx)
     {
-        super(tag, ctx);
+        super(tag,connectType, ctx);
     }
 
     @Override
@@ -34,15 +34,15 @@ public class VideoSubscriber extends Subscriber
         // 之前是不是已经发送过了？没有的话，需要补发FLV HEADER的。。。
         if (videoHeaderSent == false && flvEncoder.videoReady())
         {
-            enqueue(HttpChunk.make(flvEncoder.getHeader().getBytes()));
-            enqueue(HttpChunk.make(flvEncoder.getVideoHeader().getBytes()));
+            enqueue(flvEncoder.getHeader().getBytes());
+            enqueue(flvEncoder.getVideoHeader().getBytes());
 
             // 直接下发第一个I帧
             byte[] iFrame = flvEncoder.getLastIFrame();
             if (iFrame != null)
             {
                 FLVUtils.resetTimestamp(iFrame, (int) videoTimestamp);
-                enqueue(HttpChunk.make(iFrame));
+                enqueue(iFrame);
             }
 
             videoHeaderSent = true;
@@ -56,7 +56,7 @@ public class VideoSubscriber extends Subscriber
         videoTimestamp += (int)(timeoffset - lastVideoFrameTimeOffset);
         lastVideoFrameTimeOffset = timeoffset;
 
-        enqueue(HttpChunk.make(data));
+        enqueue(data);
     }
 
     private FlvAudioTagEncoder audioEncoder = new FlvAudioTagEncoder();
@@ -89,7 +89,7 @@ public class VideoSubscriber extends Subscriber
         audioTimestamp += (int)(timeoffset - lastAudioFrameTimeOffset);
         lastAudioFrameTimeOffset = timeoffset;
 
-        enqueue(HttpChunk.make(frameData));
+        enqueue(frameData);
     }
 
     @Override

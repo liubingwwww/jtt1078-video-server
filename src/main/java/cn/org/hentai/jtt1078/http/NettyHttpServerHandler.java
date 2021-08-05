@@ -1,8 +1,10 @@
 package cn.org.hentai.jtt1078.http;
 
+import cn.org.hentai.jtt1078.entity.ConnectType;
 import cn.org.hentai.jtt1078.entity.Media;
 import cn.org.hentai.jtt1078.publisher.PublishManager;
 import cn.org.hentai.jtt1078.server.Session;
+import cn.org.hentai.jtt1078.subscriber.Subscriber;
 import cn.org.hentai.jtt1078.util.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -53,8 +55,9 @@ public class NettyHttpServerHandler extends ChannelInboundHandlerAdapter
             ctx.writeAndFlush(resp.getBytes()).await();
 
             // 订阅视频数据
-            long wid = PublishManager.getInstance().subscribe(tag, Media.Type.Video, ctx).getId();
-            setSession(ctx, new Session().set("subscriber-id", wid).set("tag", tag));
+            Subscriber subscriber= PublishManager.getInstance().subscribe(tag, Media.Type.Video,ConnectType.HTTP, ctx);
+            subscriber.start();//开启监听，读取队列
+            setSession(ctx, new Session().set("subscriber-id", subscriber.getId()).set("tag", tag));
         }
         else if (uri.equals("/test/multimedia"))
         {

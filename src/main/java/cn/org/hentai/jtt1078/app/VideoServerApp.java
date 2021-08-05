@@ -1,7 +1,7 @@
 package cn.org.hentai.jtt1078.app;
 
 import cn.org.hentai.jtt1078.http.GeneralResponseWriter;
-import cn.org.hentai.jtt1078.http.NettyHttpServerHandler;
+import cn.org.hentai.jtt1078.http.NettyWebSocketServerHandler;
 import cn.org.hentai.jtt1078.publisher.PublishManager;
 import cn.org.hentai.jtt1078.server.Jtt1078Handler;
 import cn.org.hentai.jtt1078.server.Jtt1078MessageDecoder;
@@ -15,11 +15,12 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
-import io.netty.handler.timeout.IdleStateHandler;
+
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 
@@ -124,7 +125,8 @@ public class VideoServerApp
                                     new HttpResponseEncoder(),
                                     new HttpRequestDecoder(),
                                     new HttpObjectAggregator(1024 * 64),
-                                    new NettyHttpServerHandler()
+                                    //new NettyHttpServerHandler()
+                                    new NettyWebSocketServerHandler()
                             );
                         }
                     }).option(ChannelOption.SO_BACKLOG, 1024)

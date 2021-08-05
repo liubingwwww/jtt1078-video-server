@@ -1,6 +1,7 @@
 package cn.org.hentai.jtt1078.publisher;
 
 import cn.org.hentai.jtt1078.codec.AudioCodec;
+import cn.org.hentai.jtt1078.entity.ConnectType;
 import cn.org.hentai.jtt1078.entity.Media;
 import cn.org.hentai.jtt1078.entity.MediaEncoding;
 import cn.org.hentai.jtt1078.flv.FlvEncoder;
@@ -28,15 +29,17 @@ public class Channel
     RTMPPublisher rtmpPublisher;
 
     String tag;
+    ConnectType type;
     boolean publishing;
     ByteHolder buffer;
     AudioCodec audioCodec;
     FlvEncoder flvEncoder;
     private long firstTimestamp = -1;
 
-    public Channel(String tag)
+    public Channel(String tag, ConnectType type)
     {
         this.tag = tag;
+        this.type=type;
         this.subscribers = new ConcurrentLinkedQueue<Subscriber>();
         this.flvEncoder = new FlvEncoder(true, true);
         this.buffer = new ByteHolder(2048 * 100);
@@ -53,11 +56,16 @@ public class Channel
         return publishing;
     }
 
+    /**
+     * 如果是短连接，没有办法判断重复，只能new VideoSubscriber
+     * @param ctx
+     * @return
+     */
     public Subscriber subscribe(ChannelHandlerContext ctx)
     {
         logger.info("channel: {} -> {}, subscriber: {}", Long.toHexString(hashCode() & 0xffffffffL), tag, ctx.channel().remoteAddress().toString());
 
-        Subscriber subscriber = new VideoSubscriber(this.tag, ctx);
+        Subscriber subscriber = new VideoSubscriber(this.tag,type, ctx);
         this.subscribers.add(subscriber);
         return subscriber;
     }
@@ -72,23 +80,25 @@ public class Channel
         broadcastAudio(timestamp, audioCodec.toPCM(data));
     }
 
-    public void writeVideo(long sequence, long timeoffset, int payloadType, byte[] h264)
+    public void  writeVideo(long sequence, long timeoffset, int payloadType, byte[] h264)
     {
-        if (firstTimestamp == -1) firstTimestamp = timeoffset;
-        this.publishing = true;
-        this.buffer.write(h264);
-        while (true)
-        {
-            byte[] nalu = readNalu();
-            if (nalu == null) break;
-            if (nalu.length < 4) continue;
+        if(subscribers != null && subscribers.size() > 0){
+            if (firstTimestamp == -1) firstTimestamp = timeoffset;
+            this.publishing = true;
+            this.buffer.write(h264);
+            while (true)
+            {
+                byte[] nalu = readNalu();
+                if (nalu == null) break;
+                if (nalu.length < 4) continue;
 
-            byte[] flvTag = this.flvEncoder.write(nalu, (int) (timeoffset - firstTimestamp));
+                byte[] flvTag = this.flvEncoder.write(nalu, (int) (timeoffset - firstTimestamp));
 
-            if (flvTag == null) continue;
+                if (flvTag == null) continue;
 
-            // 广播给所有的观众
-            broadcastVideo(timeoffset, flvTag);
+                // 广播给所有的观众
+                broadcastVideo(timeoffset, flvTag);
+            }
         }
     }
 

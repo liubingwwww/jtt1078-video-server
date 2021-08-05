@@ -1,9 +1,12 @@
 package cn.org.hentai.jtt1078.subscriber;
 
+import cn.org.hentai.jtt1078.entity.ConnectType;
 import cn.org.hentai.jtt1078.flv.FlvEncoder;
-import cn.org.hentai.jtt1078.util.Packet;
+import cn.org.hentai.jtt1078.util.HttpChunk;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,13 +23,15 @@ public abstract class Subscriber extends Thread
 
     private long id;
     private String tag;
+    private ConnectType connectType;
     private Object lock;
     private ChannelHandlerContext context;
     protected LinkedList<byte[]> messages;
 
-    public Subscriber(String tag, ChannelHandlerContext ctx)
+    public Subscriber(String tag, ConnectType connectType, ChannelHandlerContext ctx)
     {
         this.tag = tag;
+        this.connectType=connectType;
         this.context = ctx;
         this.lock = new Object();
         this.messages = new LinkedList<byte[]>();
@@ -51,11 +56,17 @@ public abstract class Subscriber extends Thread
     public void enqueue(byte[] data)
     {
         if (data == null) return;
-        synchronized (lock)
-        {
-            messages.addLast(data);
-            lock.notify();
+        if(connectType.getName().equals(ConnectType.HTTP.getName())){
+            synchronized (lock)
+            {
+                messages.addLast(HttpChunk.make(data));
+                lock.notify();
+            }
         }
+        else if(connectType.getName().equals(ConnectType.WEBSOCKET.getName())){
+            wsSend(data);
+        }
+
     }
 
     public void run()
@@ -111,4 +122,8 @@ public abstract class Subscriber extends Thread
     {
         return context.writeAndFlush(message);
     }
+    public void wsSend(byte [] message){
+        context.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(message)));
+    }
+
 }

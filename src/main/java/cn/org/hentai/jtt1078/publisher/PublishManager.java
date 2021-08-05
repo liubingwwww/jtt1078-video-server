@@ -1,5 +1,6 @@
 package cn.org.hentai.jtt1078.publisher;
 
+import cn.org.hentai.jtt1078.entity.ConnectType;
 import cn.org.hentai.jtt1078.entity.Media;
 import cn.org.hentai.jtt1078.subscriber.Subscriber;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,12 +22,12 @@ public final class PublishManager
         channels = new ConcurrentHashMap<String, Channel>();
     }
 
-    public Subscriber subscribe(String tag, Media.Type type, ChannelHandlerContext ctx)
+    public Subscriber subscribe(String tag, Media.Type type, ConnectType connectType, ChannelHandlerContext ctx)
     {
         Channel chl = channels.get(tag);
         if (chl == null)
         {
-            chl = new Channel(tag);
+            chl = new Channel(tag,connectType);
             channels.put(tag, chl);
         }
         Subscriber subscriber = null;
@@ -34,7 +35,7 @@ public final class PublishManager
         else throw new RuntimeException("unknown media type: " + type);
 
         subscriber.setName("subscriber-" + tag + "-" + subscriber.getId());
-        subscriber.start();
+        //subscriber.start();
 
         return subscriber;
     }
@@ -49,18 +50,6 @@ public final class PublishManager
     {
         Channel chl = channels.get(tag);
         if (chl != null) chl.writeVideo(sequence, timestamp, payloadType, data);
-    }
-
-    public Channel open(String tag)
-    {
-        Channel chl = channels.get(tag);
-        if (chl == null)
-        {
-            chl = new Channel(tag);
-            channels.put(tag, chl);
-        }
-        if (chl.isPublishing()) throw new RuntimeException("channel already publishing");
-        return chl;
     }
 
     public void close(String tag)

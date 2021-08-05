@@ -1,20 +1,14 @@
 package cn.org.hentai.jtt1078.server;
 
-import cn.org.hentai.jtt1078.entity.Media;
-import cn.org.hentai.jtt1078.entity.MediaEncoding;
-import cn.org.hentai.jtt1078.publisher.Channel;
 import cn.org.hentai.jtt1078.publisher.PublishManager;
-import cn.org.hentai.jtt1078.entity.Audio;
 import cn.org.hentai.jtt1078.util.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.Attribute;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Iterator;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
 
 /**
  * Created by matrixy on 2019/4/9.
@@ -34,14 +28,16 @@ public class Jtt1078Handler extends SimpleChannelInboundHandler<Packet>
         int channel = packet.nextByte() & 0xff;
         String tag = sim + "-" + channel;
 
+
         if (SessionManager.contains(nettyChannel, "tag") == false)
         {
-            Channel chl = PublishManager.getInstance().open(tag);
+            //Channel chl = PublishManager.getInstance().open(tag);
             SessionManager.set(nettyChannel, "tag", tag);
-            logger.info("start publishing: {} -> {}-{}", Long.toHexString(chl.hashCode() & 0xffffffffL), sim, channel);
+            //logger.info("start publishing: {} -> {}-{}", Long.toHexString(chl.hashCode() & 0xffffffffL), sim, channel);
         }
 
-        Integer sequence = SessionManager.get(nettyChannel, "video-sequence");
+        //Integer sequence = SessionManager.get(nettyChannel, "video-sequence");
+        Integer sequence =0;
         if (sequence == null) sequence = 0;
         // 1. 做好序号
         // 2. 音频需要转码后提供订阅
@@ -60,7 +56,7 @@ public class Jtt1078Handler extends SimpleChannelInboundHandler<Packet>
             if (pkType == 0 || pkType == 2)
             {
                 sequence += 1;
-                SessionManager.set(nettyChannel, "video-sequence", sequence);
+                //SessionManager.set(nettyChannel, "video-sequence", sequence);
             }
             long timestamp = packet.seek(16).nextLong();
             PublishManager.getInstance().publishVideo(tag, sequence, timestamp, pt, packet.seek(lengthOffset + 2).nextBytes());
@@ -101,6 +97,10 @@ public class Jtt1078Handler extends SimpleChannelInboundHandler<Packet>
         }
     }
 
+    /**
+     * 推流关闭后，相关联的tag的订阅者都关闭
+     * @param channel
+     */
     private void release(io.netty.channel.Channel channel)
     {
         String tag = SessionManager.get(channel, "tag");
