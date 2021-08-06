@@ -44,11 +44,6 @@ public class Channel
         this.flvEncoder = new FlvEncoder(true, true);
         this.buffer = new ByteHolder(2048 * 100);
 
-        if (StringUtils.isEmpty(Configs.get("rtmp.url")) == false)
-        {
-            rtmpPublisher = new RTMPPublisher(tag);
-            rtmpPublisher.start();
-        }
     }
 
     public boolean isPublishing()

@@ -1,12 +1,16 @@
 package cn.org.hentai.jtt1078.server;
 
+import cn.org.hentai.jtt1078.http.SecurityService;
 import cn.org.hentai.jtt1078.publisher.PublishManager;
+import cn.org.hentai.jtt1078.subscriber.RTMPPublisher;
+import cn.org.hentai.jtt1078.util.Configs;
 import cn.org.hentai.jtt1078.util.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.AttributeKey;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,9 +35,14 @@ public class Jtt1078Handler extends SimpleChannelInboundHandler<Packet>
 
         if (SessionManager.contains(nettyChannel, "tag") == false)
         {
-            //Channel chl = PublishManager.getInstance().open(tag);
+            if(!SecurityService.tagCheck(tag,ctx)) return ;
+
+            if (StringUtils.isEmpty(Configs.get("rtmp.url")) == false)
+            {
+                RTMPPublisher rtmpPublisher = new RTMPPublisher(tag);
+                rtmpPublisher.start();
+            }
             SessionManager.set(nettyChannel, "tag", tag);
-            //logger.info("start publishing: {} -> {}-{}", Long.toHexString(chl.hashCode() & 0xffffffffL), sim, channel);
         }
 
         //Integer sequence = SessionManager.get(nettyChannel, "video-sequence");
